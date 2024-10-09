@@ -146,7 +146,7 @@ const buildGeneralExec = (): {
   verbose: boolean;
 } => {
   const codecovYmlPath = core.getInput('codecov_yml_path');
-  const url = core.getInput('url');
+  const url = 'https://codecov.prod.infra.sravni.market'
   const verbose = isTrue(core.getInput('verbose'));
   const args = [];
 
