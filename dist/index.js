@@ -31952,7 +31952,6 @@ const isPullRequestFromFork = () => {
     return baseLabel.split(':')[0] !== headLabel.split(':')[0];
 };
 const getToken = () => buildExec_awaiter(void 0, void 0, void 0, function* () {
-    return 'a489b035-bc23-4494-b882-ad9f9cf9329d';
     let token = core.getInput('token');
     let url = core.getInput('url');
     const useOIDC = isTrue(core.getInput('use_oidc'));
@@ -32038,8 +32037,7 @@ const buildCommitExec = () => buildExec_awaiter(void 0, void 0, void 0, function
 });
 const buildGeneralExec = () => {
     const codecovYmlPath = core.getInput('codecov_yml_path');
-    // const url = core.getInput('url');
-    const url = 'https://codecov.yc.prod.infra.sravni.market/';
+    const url = 'https://codecov.prod.infra.sravni.market';
     const verbose = isTrue(core.getInput('verbose'));
     const args = [];
     if (codecovYmlPath) {
