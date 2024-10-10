@@ -1,10 +1,10 @@
-import {execSync} from 'node:child_process';
-import * as crypto from 'node:crypto';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+import * as crypto from 'crypto';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import * as core from '@actions/core';
-import {request} from 'undici';
+import * as openpgp from 'openpgp';
+import * as fetch from 'node-fetch';
 
 import {
   getBaseUrl,
@@ -22,97 +22,68 @@ const verify = async (
   try {
     const uploaderName = getUploaderName(platform);
 
+    // Read in public key
+    const publicKeyArmored = await fs.readFileSync(
+        path.join(__dirname, 'pgp_keys.asc'),
+        'utf-8',
+    );
+
     // Get SHASUM and SHASUM signature files
     console.log(`${getBaseUrl(platform, version)}.SHA256SUM`);
-    const shasumRes = await request(
+    const shasumRes = await fetch.default(
         `${getBaseUrl(platform, version)}.SHA256SUM`,
     );
-    const shasum = await shasumRes.body.text();
+    const shasum = await shasumRes.text();
     if (verbose) {
       console.log(`Received SHA256SUM ${shasum}`);
     }
-    await fs.writeFileSync(
-        path.join(__dirname, `${uploaderName}.SHA256SUM`),
-        shasum,
-    );
 
-    const shaSigRes = await request(
+    const shaSigRes = await fetch.default(
         `${getBaseUrl(platform, version)}.SHA256SUM.sig`,
     );
-    const shaSig = await shaSigRes.body.text();
+    const shaSig = await shaSigRes.text();
     if (verbose) {
       console.log(`Received SHA256SUM signature ${shaSig}`);
     }
-    await fs.writeFileSync(
-        path.join(__dirname, `${uploaderName}.SHA256SUM.sig`),
-        shaSig,
-    );
 
-    const validateSha = async () => {
-      const calculateHash = async (filename: string) => {
-        const stream = fs.createReadStream(filename);
-        const uploaderSha = crypto.createHash(`sha256`);
-        stream.pipe(uploaderSha);
-
-        return new Promise((resolve, reject) => {
-          stream.on('end', () => resolve(
-              `${uploaderSha.digest('hex')}  ${uploaderName}`,
-          ));
-          stream.on('error', reject);
-        });
-      };
-
-      const hash = await calculateHash(
-          path.join(__dirname, `${uploaderName}`),
+    // Verify shasum
+    const verified = await openpgp.verify({
+      message: await openpgp.createMessage({text: shasum}),
+      signature: await openpgp.readSignature({armoredSignature: shaSig}),
+      verificationKeys: await openpgp.readKeys({armoredKeys: publicKeyArmored}),
+    });
+    const valid = await verified.signatures[0].verified;
+    if (valid) {
+      core.info('==> SHASUM file signed by key id ' +
+          verified.signatures[0].keyID.toHex(),
       );
-      if (hash === shasum) {
-        core.info(`==> Uploader SHASUM verified (${hash})`);
-      } else {
-        setFailure(
-            'Codecov: Uploader shasum does not match -- ' +
-              `uploader hash: ${hash}, public hash: ${shasum}`,
-            failCi,
-        );
-      }
+    } else {
+      setFailure('Codecov: Error validating SHASUM signature', failCi);
+    }
+
+    const calculateHash = async (filename: string) => {
+      const stream = fs.createReadStream(filename);
+      const uploaderSha = crypto.createHash(`sha256`);
+      stream.pipe(uploaderSha);
+
+      return new Promise((resolve, reject) => {
+        stream.on('end', () => resolve(
+            `${uploaderSha.digest('hex')}  ${uploaderName}`,
+        ));
+        stream.on('error', reject);
+      });
     };
 
-    const verifySignature = async () => {
-      const command = [
-        'gpg',
-        '--logger-fd',
-        '1',
-        '--verify',
-        path.join(__dirname, `${uploaderName}.SHA256SUM.sig`),
-        path.join(__dirname, `${uploaderName}.SHA256SUM`),
-      ].join(' ');
-
-      try {
-        await execSync(command, {stdio: 'inherit'});
-      } catch (err) {
-        setFailure(`Codecov: Error verifying gpg signature: ${err.message}`, failCi);
-      }
-    };
-
-    const importKey = async () => {
-      const command = [
-        'gpg',
-        '--logger-fd',
-        '1',
-        '--no-default-keyring',
-        '--import',
-        path.join(__dirname, 'pgp_keys.asc'),
-      ].join(' ');
-
-      try {
-        await execSync(command, {stdio: 'inherit'});
-      } catch (err) {
-        setFailure(`Codecov: Error importing gpg key: ${err.message}`, failCi);
-      }
-    };
-
-    await importKey();
-    await verifySignature();
-    await validateSha();
+    const hash = await calculateHash(filename);
+    if (hash === shasum) {
+      core.info(`==> Uploader SHASUM verified (${hash})`);
+    } else {
+      setFailure(
+          'Codecov: Uploader shasum does not match -- ' +
+            `uploader hash: ${hash}, public hash: ${shasum}`,
+          failCi,
+      );
+    }
   } catch (err) {
     setFailure(`Codecov: Error validating uploader: ${err.message}`, failCi);
   }

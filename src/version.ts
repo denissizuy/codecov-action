@@ -1,17 +1,19 @@
 import * as core from '@actions/core';
-import {request} from 'undici';
+import * as fetch from 'node-fetch';
 
 const versionInfo = async (
     platform: string,
-    version: string,
+    version?: string,
 ): Promise<void> => {
-  core.info(`==> Running version ${version}`);
+  if (version) {
+    core.info(`==> Running version ${version}`);
+  }
 
   try {
-    const metadataRes = await request(`https://cli.codecov.io/${platform}/${version}`, {
+    const metadataRes = await fetch.default( `https://uploader.codecov.io/${platform}/latest`, {
       headers: {'Accept': 'application/json'},
     });
-    const metadata = await metadataRes.body.json();
+    const metadata = await metadataRes.json();
     core.info(`==> Running version ${metadata['version']}`);
   } catch (err) {
     core.info(`Could not pull latest version information: ${err}`);

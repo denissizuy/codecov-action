@@ -1,26 +1,18 @@
 import * as core from '@actions/core';
-import * as exec from '@actions/exec';
 
 const PLATFORMS = [
+  'aarch64',
+  'alpine',
   'linux',
   'macos',
   'windows',
-  'alpine',
-  'linux-arm64',
-  'alpine-arm64',
-] as const;
-type Platform = typeof PLATFORMS[number];
+];
 
 const setFailure = (message: string, failCi: boolean): void => {
-  if (failCi) {
-    core.setFailed(message);
-  } else {
-    core.warning(message);
-  }
-
-  if (failCi) {
-    process.exit();
-  }
+    failCi ? core.setFailed(message) : core.warning(message);
+    if (failCi) {
+      process.exit();
+    }
 };
 
 const getUploaderName = (platform: string): string => {
@@ -31,8 +23,8 @@ const getUploaderName = (platform: string): string => {
   }
 };
 
-const isValidPlatform = (platform: string): platform is Platform => {
-  return PLATFORMS.includes(platform as Platform);
+const isValidPlatform = (platform: string): boolean => {
+  return PLATFORMS.includes(platform);
 };
 
 const isWindows = (platform: string): boolean => {
@@ -61,29 +53,6 @@ const getBaseUrl = (platform: string, version: string): string => {
   return `https://s44751.cos.ngenix.net/systems/codecov`;
 };
 
-const getCommand = (
-    filename: string,
-    generalArgs:string[],
-    command: string,
-): string[] => {
-  const fullCommand = [filename, ...generalArgs, command];
-  core.info(`==> Running command '${fullCommand.join(' ')}'`);
-  return fullCommand;
-};
-
-const setSafeDirectory = async () => {
-  const command = ([
-    'git',
-    'config',
-    '--global',
-    '--add',
-    'safe.directory',
-    `${process.env['GITHUB_WORKSPACE']}`,
-  ].join(' '));
-  core.info(`==> Running ${command}`);
-  await exec.exec(command);
-};
-
 export {
   PLATFORMS,
   getBaseUrl,
@@ -92,6 +61,4 @@ export {
   isValidPlatform,
   isWindows,
   setFailure,
-  setSafeDirectory,
-  getCommand,
 };
