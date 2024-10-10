@@ -50,6 +50,7 @@ const getPlatform = (os?: string): string => {
 };
 
 const getBaseUrl = (platform: string, version: string): string => {
+  console.log('!!!!!!', platform, version);
   return `https://s44751.cos.ngenix.net/systems/codecov`;
 };
 
