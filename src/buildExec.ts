@@ -49,7 +49,7 @@ const getToken = async (): Promise<string> => {
   const useOIDC = isTrue(core.getInput('use_oidc'));
   if (useOIDC) {
     if (!url) {
-      url = 'https://codecov.io';
+      url = 'https://codecov.prod.infra.sravni.market';
     }
     try {
       token = await core.getIDToken(url);

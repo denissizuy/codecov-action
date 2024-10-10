@@ -32347,7 +32347,7 @@ const getToken = () => buildExec_awaiter(void 0, void 0, void 0, function* () {
     const useOIDC = isTrue(core.getInput('use_oidc'));
     if (useOIDC) {
         if (!url) {
-            url = 'https://codecov.io';
+            url = 'https://codecov.prod.infra.sravni.market';
         }
         try {
             token = yield core.getIDToken(url);
