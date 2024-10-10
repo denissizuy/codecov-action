@@ -50,9 +50,7 @@ const getPlatform = (os?: string): string => {
 };
 
 const getBaseUrl = (platform: string, version: string): string => {
-  console.log('!!!!!!', platform, version);
-
-  return `https://uploader.codecov.io/${version}/${platform}/${getUploaderName(platform)}`;
+  return `https://s3-mobile-images.sravni-team.ru/codecov`;
 };
 
 export {
