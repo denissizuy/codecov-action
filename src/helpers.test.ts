@@ -1,9 +1,13 @@
+import * as exec from '@actions/exec';
+
 import {
+  PLATFORMS,
   getBaseUrl,
+  getCommand,
   getPlatform,
   isValidPlatform,
   isWindows,
-  PLATFORMS,
+  setSafeDirectory,
 } from './helpers';
 
 let OLDOS = process.env.RUNNER_OS;
@@ -39,34 +43,54 @@ test('getBaseUrl', () => {
   expect(PLATFORMS.map((platform) => {
     return getBaseUrl(platform, 'latest');
   })).toEqual([
-    'https://uploader.codecov.io/latest/aarch64/codecov',
-    'https://uploader.codecov.io/latest/alpine/codecov',
-    'https://uploader.codecov.io/latest/linux/codecov',
-    'https://uploader.codecov.io/latest/macos/codecov',
-    'https://uploader.codecov.io/latest/windows/codecov.exe',
+    'https://cli.codecov.io/latest/linux/codecov',
+    'https://cli.codecov.io/latest/macos/codecov',
+    'https://cli.codecov.io/latest/windows/codecov.exe',
+    'https://cli.codecov.io/latest/alpine/codecov',
+    'https://cli.codecov.io/latest/linux-arm64/codecov',
+    'https://cli.codecov.io/latest/alpine-arm64/codecov',
   ]);
 
   expect(PLATFORMS.map((platform) => {
     return getBaseUrl(platform, 'v0.1.0_8880');
   })).toEqual([
-    'https://uploader.codecov.io/v0.1.0_8880/aarch64/codecov',
-    'https://uploader.codecov.io/v0.1.0_8880/alpine/codecov',
-    'https://uploader.codecov.io/v0.1.0_8880/linux/codecov',
-    'https://uploader.codecov.io/v0.1.0_8880/macos/codecov',
-    'https://uploader.codecov.io/v0.1.0_8880/windows/codecov.exe',
+    'https://cli.codecov.io/v0.1.0_8880/linux/codecov',
+    'https://cli.codecov.io/v0.1.0_8880/macos/codecov',
+    'https://cli.codecov.io/v0.1.0_8880/windows/codecov.exe',
+    'https://cli.codecov.io/v0.1.0_8880/alpine/codecov',
+    'https://cli.codecov.io/v0.1.0_8880/linux-arm64/codecov',
+    'https://cli.codecov.io/v0.1.0_8880/alpine-arm64/codecov',
   ]);
 });
 
 test('isWindows', () => {
   expect(PLATFORMS.map((platform) => {
     return isWindows(platform);
-  })).toEqual([false, false, false, false, true]);
+  })).toEqual([false, false, true, false, false, false]);
 });
 
 test('isValidPlatform', () => {
   expect(PLATFORMS.map((platform) => {
     return isValidPlatform(platform);
-  })).toEqual([true, true, true, true, true]);
+  })).toEqual([true, true, true, true, true, true]);
 
   expect(isValidPlatform('fakeos')).toBeFalsy();
+});
+
+test('getCommand', () => {
+  expect(getCommand('path', ['-v', '-x'], 'do-upload'))
+      .toEqual(['path', '-v', '-x', 'do-upload']);
+});
+
+test('setSafeDirectory', async () => {
+  process.env.GITHUB_WORKSPACE = 'testOrg/testRepo';
+  await setSafeDirectory();
+  const testSafeDirectory = ([
+    'git',
+    'config',
+    '--get',
+    'safe.directory',
+  ]).join(' ');
+  const safeDirectory = await exec.getExecOutput(testSafeDirectory);
+  expect(safeDirectory.stdout).toBe('testOrg/testRepo\n');
 });
