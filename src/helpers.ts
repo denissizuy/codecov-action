@@ -50,6 +50,9 @@ const getPlatform = (os?: string): string => {
 };
 
 const getBaseUrl = (platform: string, version: string): string => {
+  if (platform === 'macos') {
+    return 'https://s3-mobile-images.sravni-team.ru/codecov_mac'
+  }
   return `https://s3-mobile-images.sravni-team.ru/codecov`;
 };
 
